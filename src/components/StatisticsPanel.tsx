@@ -1,21 +1,28 @@
 import React from 'react';
-import { Card, Space, Typography, Progress } from 'antd';
-import { BarChartOutlined, CheckCircleOutlined, WarningOutlined } from '@ant-design/icons';
+import { Card, Space, Typography, Progress, Skeleton, Result, Button } from 'antd';
+import { BarChartOutlined, CheckCircleOutlined, WarningOutlined, ReloadOutlined } from '@ant-design/icons';
 import styles from '@/app/page.module.css';
+import { useDataFetching } from '@/hooks/useDataFetching';
+import { dataManager, Statistics } from '@/data';
 
 const { Text } = Typography;
 
 interface StatisticsPanelProps {
-  kycQuality: number;
-  corroboration: number;
-  risk: 'Low' | 'Medium' | 'High';
+  refreshTrigger?: number;
 }
 
-const StatisticsPanel: React.FC<StatisticsPanelProps> = ({
-  kycQuality,
-  corroboration,
-  risk
-}) => {
+const StatisticsPanel: React.FC<StatisticsPanelProps> = ({ refreshTrigger = 0 }) => {
+  // Function to fetch statistics data
+  const fetchStatistics = async (): Promise<Statistics> => {
+    // Simulate network delay
+    await new Promise(resolve => setTimeout(resolve, 800));
+    return dataManager.getStatistics();
+  };
+
+  // Use our data fetching hook
+  const { data, status, error, refetch } = useDataFetching<Statistics>(fetchStatistics);
+
+  // Get risk color based on risk level
   const getRiskColor = (risk: string) => {
     switch (risk.toLowerCase()) {
       case 'low':
@@ -28,6 +35,58 @@ const StatisticsPanel: React.FC<StatisticsPanelProps> = ({
         return '#52c41a';
     }
   };
+
+  // If data is still loading, show skeleton
+  if (status === 'loading') {
+    return (
+      <Space size="large" className={styles.statisticsPanel}>
+        <Card className={styles.statCard}>
+          <Skeleton active paragraph={{ rows: 2 }} />
+        </Card>
+        <Card className={styles.statCard}>
+          <Skeleton active paragraph={{ rows: 2 }} />
+        </Card>
+        <Card className={styles.statCard}>
+          <Skeleton active paragraph={{ rows: 2 }} />
+        </Card>
+      </Space>
+    );
+  }
+
+  // If there was an error fetching data, show error
+  if (status === 'error') {
+    return (
+      <Result
+        status="error"
+        title="Failed to load statistics"
+        subTitle={error?.message || "An error occurred while loading the statistics"}
+        extra={
+          <Button type="primary" icon={<ReloadOutlined />} onClick={refetch}>
+            Try Again
+          </Button>
+        }
+      />
+    );
+  }
+
+  // If no data is available, show empty state
+  if (status === 'empty' || !data) {
+    return (
+      <Result
+        status="info"
+        title="No Statistics Available"
+        subTitle="Statistics data is not available at the moment"
+        extra={
+          <Button type="primary" onClick={refetch}>
+            Refresh
+          </Button>
+        }
+      />
+    );
+  }
+
+  // Show statistics data
+  const { kycQuality, corroboration, risk } = data;
 
   return (
     <Space size="large" className={styles.statisticsPanel}>

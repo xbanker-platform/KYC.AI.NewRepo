@@ -23,6 +23,7 @@ export default function Home() {
   const [actionStatuses, setActionStatuses] = useState<Record<number, string>>({});
   const [activeDropdownId, setActiveDropdownId] = useState<number | null>(null);
   const [checkModalVisible, setCheckModalVisible] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const handleCheck = () => {
     // Show the check process modal
@@ -31,6 +32,8 @@ export default function Home() {
 
   const handleCloseCheckModal = () => {
     setCheckModalVisible(false);
+    // Trigger a refresh of statistics
+    setRefreshTrigger(prev => prev + 1);
   };
 
   function handleIssueAction(issueId: number, action: string) {
@@ -176,6 +179,11 @@ export default function Home() {
                     {category.name} ({category.count})
                   </Button>
                 ))}
+              </div>
+
+              {/* Statistics Panel */}
+              <div style={{ marginBottom: '16px' }}>
+                <StatisticsPanel refreshTrigger={refreshTrigger} />
               </div>
 
               <div style={{ flex: 1, overflow: 'hidden' }}>
