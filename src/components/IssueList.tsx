@@ -1,19 +1,16 @@
 import React, { useState } from 'react';
 import { Space, Card, Typography, Button, Progress, Tag, Dropdown, Menu } from 'antd';
 import { QuestionCircleOutlined, CheckCircleFilled, WarningOutlined, RightOutlined, CloseOutlined, DownOutlined, UpOutlined } from '@ant-design/icons';
-import type { Issue } from '@/data/mockData';
+import type { Issue, IssueAction } from '@/data/types';
 import styles from '../app/page.module.css';
+import { useDataFetching } from '@/hooks/useDataFetching';
+import { dataManager } from '@/data';
+import DataFetchingContainer from './DataFetchingContainer';
 
 const { Text } = Typography;
 
-interface IssueAction {
-  label: string;
-  type: "primary" | "default" | "dashed" | "link" | "text";
-  onClick: (id: number) => void;
-}
-
 interface IssueListProps {
-  issues: Issue[];
+  categoryId?: string;
   expandedIssues: number[];
   issueActions: IssueAction[];
   activeDropdownId: number | null;
@@ -24,7 +21,7 @@ interface IssueListProps {
 }
 
 const IssueList: React.FC<IssueListProps> = ({
-  issues,
+  categoryId,
   expandedIssues,
   issueActions,
   activeDropdownId,
@@ -36,6 +33,29 @@ const IssueList: React.FC<IssueListProps> = ({
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
   const [activeState, setActiveState] = useState<'all' | 'open' | 'solved' | 'dismissed'>('all');
   const [detailsExpanded, setDetailsExpanded] = useState(true);
+
+  // Function to fetch issues based on category and state
+  const fetchIssues = async (): Promise<Issue[]> => {
+    // If a specific category is provided, filter by that category
+    let issues = categoryId 
+      ? dataManager.getIssuesByCategory(categoryId) 
+      : dataManager.getIssues();
+    
+    // If a specific state is selected (not 'all'), filter by that state
+    if (activeState !== 'all') {
+      issues = issues.filter(issue => issue.state === activeState);
+    }
+    
+    // Sort issues by state if in 'all' view
+    if (activeState === 'all') {
+      issues = [...issues].sort((a, b) => {
+        const stateOrder = { open: 1, solved: 2, dismissed: 3 };
+        return stateOrder[a.state as keyof typeof stateOrder] - stateOrder[b.state as keyof typeof stateOrder];
+      });
+    }
+    
+    return issues;
+  };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -84,63 +104,47 @@ const IssueList: React.FC<IssueListProps> = ({
           }}
           onClick={() => setActiveState('all')}
         >
-          All Issues ({issues.length})
+          All Issues
         </Button>
         <Button
           style={{ 
-            backgroundColor: activeState === 'open' ? '#f5f0ff' : 'white',
-            borderColor: '#722ed1',
-            color: '#722ed1',
+            backgroundColor: activeState === 'open' ? '#f0f0f0' : 'white',
+            borderColor: '#e0e0e0',
+            color: '#333',
             borderRadius: '20px'
           }}
           onClick={() => setActiveState('open')}
-          icon={<QuestionCircleOutlined />}
         >
-          Open Issues ({issues.filter(issue => issue.state === 'open').length})
+          Open
         </Button>
         <Button
           style={{ 
-            backgroundColor: activeState === 'solved' ? '#f0fff5' : 'white',
-            borderColor: '#52c41a',
-            color: '#52c41a',
+            backgroundColor: activeState === 'solved' ? '#f0f0f0' : 'white',
+            borderColor: '#e0e0e0',
+            color: '#333',
             borderRadius: '20px'
           }}
           onClick={() => setActiveState('solved')}
-          icon={<CheckCircleFilled />}
         >
-          Solved Issues ({issues.filter(issue => issue.state === 'solved').length})
+          Solved
         </Button>
         <Button
           style={{ 
-            backgroundColor: activeState === 'dismissed' ? '#fff1f0' : 'white',
-            borderColor: '#ff4d4f',
-            color: '#ff4d4f',
+            backgroundColor: activeState === 'dismissed' ? '#f0f0f0' : 'white',
+            borderColor: '#e0e0e0',
+            color: '#333',
             borderRadius: '20px'
           }}
           onClick={() => setActiveState('dismissed')}
-          icon={<CloseOutlined />}
         >
-          Dismissed Issues ({issues.filter(issue => issue.state === 'dismissed').length})
+          Dismissed
         </Button>
       </div>
     );
   };
 
   // Render issue cards horizontally
-  const renderIssueCards = () => {
-    let filteredIssues = activeState === 'all' 
-      ? issues 
-      : issues.filter(issue => issue.state === activeState);
-    
-    // If in All Issues view, sort the issues by state to group them together
-    if (activeState === 'all') {
-      // Sort issues by state: open first, then solved, then dismissed
-      filteredIssues = [...filteredIssues].sort((a, b) => {
-        const stateOrder = { open: 1, solved: 2, dismissed: 3 };
-        return stateOrder[a.state as keyof typeof stateOrder] - stateOrder[b.state as keyof typeof stateOrder];
-      });
-    }
-
+  const renderIssueCards = (issues: Issue[]) => {
     return (
       <div style={{ 
         display: 'flex', 
@@ -148,7 +152,7 @@ const IssueList: React.FC<IssueListProps> = ({
         flexWrap: 'wrap', 
         marginBottom: '20px'
       }}>
-        {filteredIssues.map(issue => {
+        {issues.map(issue => {
           const isSelected = selectedIssue?.id === issue.id;
           // Set border color based on state
           let borderColor = '#722ed1'; // Default purple for open
@@ -470,6 +474,31 @@ const IssueList: React.FC<IssueListProps> = ({
     );
   };
 
+  // Render all content with data fetching container
+  const renderIssueListContent = (issues: Issue[]) => {
+    if (issues.length === 0) {
+      return (
+        <div style={{ 
+          textAlign: 'center', 
+          padding: '40px 0',
+          color: '#52c41a',
+          fontSize: '18px',
+          fontWeight: 'bold',
+          flex: 1
+        }}>
+          Congratulations, no issues found
+        </div>
+      );
+    }
+
+    return (
+      <div style={{ flex: 1, overflow: 'auto' }}>
+        {renderIssueCards(issues)}
+        {renderIssueDetails()}
+      </div>
+    );
+  };
+
   return (
     <div className={styles.issueListContainer} style={{ 
       background: 'white', 
@@ -483,23 +512,13 @@ const IssueList: React.FC<IssueListProps> = ({
     }}>
       {renderStateButtons()}
       
-      {issues.length > 0 ? (
-        <div style={{ flex: 1, overflow: 'auto' }}>
-          {renderIssueCards()}
-          {renderIssueDetails()}
-        </div>
-      ) : (
-        <div style={{ 
-          textAlign: 'center', 
-          padding: '40px 0',
-          color: '#52c41a',
-          fontSize: '18px',
-          fontWeight: 'bold',
-          flex: 1
-        }}>
-          Congratulations, no issues found
-        </div>
-      )}
+      <DataFetchingContainer<Issue[]>
+        fetchFn={fetchIssues}
+        renderSuccess={renderIssueListContent}
+        loadingMessage="Loading issues..."
+        emptyMessage="No issues found"
+        errorTitle="Failed to load issues"
+      />
     </div>
   );
 };

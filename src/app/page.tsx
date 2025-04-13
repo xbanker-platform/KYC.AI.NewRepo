@@ -180,7 +180,7 @@ export default function Home() {
 
               <div style={{ flex: 1, overflow: 'hidden' }}>
                 <IssueList
-                  issues={issues.filter(issue => issue.category === activeCategory)}
+                  categoryId={activeCategory}
                   expandedIssues={expandedIssues}
                   issueActions={issueActions}
                   activeDropdownId={activeDropdownId}

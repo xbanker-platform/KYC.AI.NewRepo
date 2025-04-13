@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Card, Button, Tabs, Table, Space, Typography, Badge, Tag, Modal, Form, Input, Select } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import { dataManager, Issue, Company, Category } from '../data';
+import { useDataFetching } from '@/hooks/useDataFetching';
+import DataFetchingContainer from './DataFetchingContainer';
 
 const { Title, Text } = Typography;
 const { TabPane } = Tabs;
@@ -14,23 +16,22 @@ interface DataManagementPanelProps {
 
 const DataManagementPanel: React.FC<DataManagementPanelProps> = ({ activeTab = "1" }) => {
   const [currentTab, setCurrentTab] = useState(activeTab);
-  const [issues, setIssues] = useState<Issue[]>([]);
-  const [companies, setCompanies] = useState<Company[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [editingIssue, setEditingIssue] = useState<Issue | null>(null);
   const [form] = Form.useForm();
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  // Load data when component mounts
-  useEffect(() => {
-    refreshData();
-  }, []);
+  // Fetch functions
+  const fetchIssues = async (): Promise<Issue[]> => {
+    return dataManager.getIssues();
+  };
 
-  // Refresh all data
-  const refreshData = () => {
-    setIssues(dataManager.getIssues());
-    setCompanies(dataManager.getCompanies());
-    setCategories(dataManager.getCategories());
+  const fetchCompanies = async (): Promise<Company[]> => {
+    return dataManager.getCompanies();
+  };
+
+  const fetchCategories = async (): Promise<Category[]> => {
+    return dataManager.getCategories();
   };
 
   // Handle tab change
@@ -46,7 +47,7 @@ const DataManagementPanel: React.FC<DataManagementPanelProps> = ({ activeTab = "
       content: 'This action cannot be undone.',
       onOk() {
         dataManager.deleteIssue(id);
-        refreshData();
+        setRefreshTrigger(prev => prev + 1);
       },
     });
   };
@@ -92,7 +93,7 @@ const DataManagementPanel: React.FC<DataManagementPanelProps> = ({ activeTab = "
         });
       }
       setIsModalVisible(false);
-      refreshData();
+      setRefreshTrigger(prev => prev + 1);
     });
   };
 
@@ -218,46 +219,77 @@ const DataManagementPanel: React.FC<DataManagementPanelProps> = ({ activeTab = "
     },
   ];
 
+  // Render functions for each data type
+  const renderIssuesTable = (issues: Issue[]) => (
+    <>
+      <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between' }}>
+        <Title level={5}>Issues Management</Title>
+        <Button type="primary" icon={<PlusOutlined />} onClick={handleNewIssue}>
+          New Issue
+        </Button>
+      </div>
+      <Table
+        dataSource={issues}
+        columns={issueColumns}
+        rowKey="id"
+        pagination={{ pageSize: 10 }}
+        size="small"
+      />
+    </>
+  );
+
+  const renderCompaniesTable = (companies: Company[]) => (
+    <>
+      <div style={{ marginBottom: '16px' }}>
+        <Title level={5}>Companies</Title>
+      </div>
+      <Table
+        dataSource={companies}
+        columns={companyColumns}
+        rowKey="id"
+        pagination={false}
+        size="small"
+      />
+    </>
+  );
+
+  const renderCategoriesTable = (categories: Category[]) => (
+    <>
+      <div style={{ marginBottom: '16px' }}>
+        <Title level={5}>Categories</Title>
+      </div>
+      <Table
+        dataSource={categories}
+        columns={categoryColumns}
+        rowKey="id"
+        pagination={false}
+        size="small"
+      />
+    </>
+  );
+
   return (
     <Card title="Data Management" style={{ width: '100%' }}>
       <Tabs activeKey={currentTab} onChange={handleTabChange}>
         <TabPane tab="Issues" key="1">
-          <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between' }}>
-            <Title level={5}>Issues Management</Title>
-            <Button type="primary" icon={<PlusOutlined />} onClick={handleNewIssue}>
-              New Issue
-            </Button>
-          </div>
-          <Table
-            dataSource={issues}
-            columns={issueColumns}
-            rowKey="id"
-            pagination={{ pageSize: 10 }}
-            size="small"
+          <DataFetchingContainer<Issue[]>
+            fetchFn={fetchIssues}
+            renderSuccess={renderIssuesTable}
+            key={`issues-${refreshTrigger}`}
           />
         </TabPane>
         <TabPane tab="Companies" key="2">
-          <div style={{ marginBottom: '16px' }}>
-            <Title level={5}>Companies</Title>
-          </div>
-          <Table
-            dataSource={companies}
-            columns={companyColumns}
-            rowKey="id"
-            pagination={false}
-            size="small"
+          <DataFetchingContainer<Company[]>
+            fetchFn={fetchCompanies}
+            renderSuccess={renderCompaniesTable}
+            key={`companies-${refreshTrigger}`}
           />
         </TabPane>
         <TabPane tab="Categories" key="3">
-          <div style={{ marginBottom: '16px' }}>
-            <Title level={5}>Categories</Title>
-          </div>
-          <Table
-            dataSource={categories}
-            columns={categoryColumns}
-            rowKey="id"
-            pagination={false}
-            size="small"
+          <DataFetchingContainer<Category[]>
+            fetchFn={fetchCategories}
+            renderSuccess={renderCategoriesTable}
+            key={`categories-${refreshTrigger}`}
           />
         </TabPane>
       </Tabs>
@@ -287,7 +319,7 @@ const DataManagementPanel: React.FC<DataManagementPanelProps> = ({ activeTab = "
             rules={[{ required: true, message: 'Please select a category' }]}
           >
             <Select>
-              {categories.map(category => (
+              {dataManager.getCategories().map(category => (
                 <Option key={category.id} value={category.id}>{category.name}</Option>
               ))}
             </Select>
