@@ -30,8 +30,10 @@
 .main {
   display: flex;
   flex-direction: column;
-  gap: 32px;
-  grid-row-start: 2;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6rem;
+  min-height: 100vh;
 }
 
 .main ol {
@@ -165,4 +167,84 @@ a.secondary {
   .logo {
     filter: invert();
   }
+}
+
+.issueCard {
+  background: white;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.issueCard:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.issueHeader {
+  padding: 16px;
+  display: flex;
+  align-items: flex-start;
+}
+
+.statusIcon {
+  font-size: 20px;
+  margin-right: 12px;
+  margin-top: 2px;
+}
+
+.issueContent {
+  padding: 0 16px 16px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.requirements, .considerations {
+  margin-top: 16px;
+}
+
+.requirements ul, .considerations ul {
+  margin-top: 8px;
+  padding-left: 20px;
+}
+
+.requirements li, .considerations li {
+  margin-bottom: 4px;
+  color: #666;
+}
+
+.expanded {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.issueListContainer {
+  background: white;
+  border-radius: 8px;
+  padding: 16px;
+  border: 1px solid #e0e0e0;
+}
+
+.issueListContainer :global(.ant-tabs-tab) {
+  padding: 8px 16px;
+  margin-right: 8px;
+  border-radius: 20px !important;
+  transition: all 0.3s;
+}
+
+.issueListContainer :global(.ant-tabs-tab-active) {
+  background-color: #f5f5f5;
+}
+
+.issueListContainer :global(.ant-tabs-nav::before) {
+  border-bottom: none !important;
+}
+
+.issueListContainer :global(.ant-tabs-content-holder) {
+  margin-top: 16px;
+}
+
+.issueActions {
+  margin-top: 16px;
+  display: flex;
+  justify-content: flex-end;
 }
