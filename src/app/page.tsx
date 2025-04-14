@@ -8,7 +8,7 @@ import CategoryTabs from '@/components/CategoryTabs';
 import StatisticsPanel from '@/components/StatisticsPanel';
 import IssueList from '@/components/IssueList';
 import CheckProcess from '@/components/CheckProcess';
-import { categories, companies, issues as initialIssues, statistics } from '@/data/mockData';
+import { dataManager } from '@/data';
 
 const { Content } = Layout;
 const { Title } = Typography;
@@ -17,22 +17,13 @@ export default function Home() {
   const [activeCategory, setActiveCategory] = useState('SOW');
   const [activeCompany, setActiveCompany] = useState(1);
   const [expandedIssues, setExpandedIssues] = useState<number[]>([1]);
-  const [issues, setIssues] = useState(initialIssues);
-  const [issueActions] = useState([
-    {
-      label: 'Approve',
-      type: 'primary' as const,
-      onClick: (id: number) => handleIssueAction(id, 'approve')
-    },
-    {
-      label: 'Reject',
-      type: 'default' as const,
-      onClick: (id: number) => handleIssueAction(id, 'reject')
-    }
-  ]);
+  const [issues, setIssues] = useState(dataManager.getIssues());
+  const [categories] = useState(dataManager.getCategories());
+  const [issueActions] = useState(dataManager.getStandardIssueActions(handleIssueAction));
   const [actionStatuses, setActionStatuses] = useState<Record<number, string>>({});
   const [activeDropdownId, setActiveDropdownId] = useState<number | null>(null);
   const [checkModalVisible, setCheckModalVisible] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const handleCheck = () => {
     // Show the check process modal
@@ -41,9 +32,11 @@ export default function Home() {
 
   const handleCloseCheckModal = () => {
     setCheckModalVisible(false);
+    // Trigger a refresh of statistics
+    setRefreshTrigger(prev => prev + 1);
   };
 
-  const handleIssueAction = (issueId: number, action: string) => {
+  function handleIssueAction(issueId: number, action: string) {
     setActionStatuses(prev => ({
       ...prev,
       [issueId]: action
@@ -57,7 +50,7 @@ export default function Home() {
     }
     
     setActiveDropdownId(null);
-  };
+  }
 
   const updateIssueState = (issueId: number, newState: 'open' | 'solved' | 'dismissed') => {
     setIssues(prevIssues => 
@@ -76,8 +69,19 @@ export default function Home() {
   };
 
   return (
-    <Layout style={{ background: '#f5f5f5', display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      <Content style={{ padding: '16px', backgroundColor: '#f5f5f5', flex: 1 }}>
+    <Layout style={{ background: '#f5f5f5' }}>
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'flex-end', 
+        padding: '8px 16px', 
+        background: 'white',
+        borderBottom: '1px solid #e8e8e8'
+      }}>
+        <Space>
+          <Button type="link" href="/admin">Admin Dashboard</Button>
+        </Space>
+      </div>
+      <Content style={{ padding: '16px', backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
         <Row gutter={16}>
           {/* Left Panel - Editor */}
           <Col span={10}>
@@ -177,9 +181,14 @@ export default function Home() {
                 ))}
               </div>
 
+              {/* Statistics Panel */}
+              <div style={{ marginBottom: '16px' }}>
+                <StatisticsPanel refreshTrigger={refreshTrigger} />
+              </div>
+
               <div style={{ flex: 1, overflow: 'hidden' }}>
                 <IssueList
-                  issues={issues.filter(issue => issue.category === activeCategory)}
+                  categoryId={activeCategory}
                   expandedIssues={expandedIssues}
                   issueActions={issueActions}
                   activeDropdownId={activeDropdownId}
