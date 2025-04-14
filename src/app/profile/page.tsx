@@ -43,8 +43,8 @@ const { Title, Text } = Typography;
 const { Content } = Layout;
 
 export default function ProfilePage() {
-  const [activeCategory, setActiveCategory] = useState(1);
-  const [activeCompany, setActiveCompany] = useState(1);
+  const [activeCategory, setActiveCategory] = useState<number>(1);
+  const [activeCompany, setActiveCompany] = useState<number>(1);
   const [expandedIssues, setExpandedIssues] = useState<number[]>([1]);
 
   const toggleExpand = (issueId: number) => {
@@ -113,13 +113,13 @@ export default function ProfilePage() {
                 {categories.map(category => (
                   <Button 
                     key={category.id}
-                    type={category.id === activeCategory ? 'primary' : 'default'}
+                    type={Number(category.id) === activeCategory ? 'primary' : 'default'}
                     style={{
-                      background: category.id === activeCategory ? '#1e293b' : '#f0f0f0',
-                      color: category.id === activeCategory ? '#fff' : '#1e293b',
+                      background: Number(category.id) === activeCategory ? '#1e293b' : '#f0f0f0',
+                      color: Number(category.id) === activeCategory ? '#fff' : '#1e293b',
                       border: 'none'
                     }}
-                    onClick={() => setActiveCategory(category.id)}
+                    onClick={() => setActiveCategory(Number(category.id))}
                   >
                     {category.name} ({category.count})
                   </Button>
@@ -134,12 +134,12 @@ export default function ProfilePage() {
                   <Card 
                     style={{ 
                       marginBottom: '8px', 
-                      border: company.id === activeCompany ? '1px solid #722ed1' : '1px solid #f0f0f0',
-                      background: company.id === activeCompany ? '#f9f0ff' : '#fff',
+                      border: Number(company.id) === activeCompany ? '1px solid #722ed1' : '1px solid #f0f0f0',
+                      background: Number(company.id) === activeCompany ? '#f9f0ff' : '#fff',
                       position: 'relative',
                       cursor: 'pointer'
                     }}
-                    onClick={() => setActiveCompany(company.id)}
+                    onClick={() => setActiveCompany(Number(company.id))}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                       <div>

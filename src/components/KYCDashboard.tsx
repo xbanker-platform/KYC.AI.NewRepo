@@ -5,6 +5,7 @@ import EvidenceStatistic from './EvidenceStatistic';
 import IssueList from './IssueList';
 import Checker from './Checker';
 import styles from '@/app/page.module.css';
+import { IssueAction } from '@/data/types';
 
 const { Content } = Layout;
 
@@ -18,7 +19,7 @@ interface KYCDashboardProps {
   activeCategory: number;
   issues: any[];
   expandedIssues: number[];
-  issueActions: Record<number, string>;
+  issueActions: IssueAction[];
   activeDropdownId: number | null;
   onCategoryClick: (id: number) => void;
   onToggleExpand: (id: number) => void;
@@ -74,13 +75,14 @@ const KYCDashboard: React.FC<KYCDashboardProps> = ({
             <Space style={{ width: '100%' }} direction="vertical">
               <Checker onCheck={onCheck} />
               <IssueList
-                issues={issues}
+                categoryId={String(activeCategory)}
                 expandedIssues={expandedIssues}
                 issueActions={issueActions}
                 activeDropdownId={activeDropdownId}
                 onToggleExpand={onToggleExpand}
                 onIssueAction={onIssueAction}
                 setActiveDropdownId={setActiveDropdownId}
+                onUpdateIssueState={(id, state) => console.log(`Update issue ${id} to ${state}`)}
               />
             </Space>
           </Col>
