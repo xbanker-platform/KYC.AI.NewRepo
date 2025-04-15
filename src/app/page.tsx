@@ -1,14 +1,16 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Layout, Row, Col, Card, Button, Space, Typography } from 'antd';
 import { EyeOutlined, MessageOutlined, CheckOutlined } from '@ant-design/icons';
 import Editor from '@/components/Editor';
 import CategoryTabs from '@/components/CategoryTabs';
-import StatisticsPanel from '@/components/StatisticsPanel';
 import IssueList from '@/components/IssueList';
+import StoryList from '@/components/StoryList';
 import CheckProcess from '@/components/CheckProcess';
+import DataFetchingContainer from '@/components/DataFetchingContainer';
 import { dataManager } from '@/data';
+import { Issue } from '@/data/types';
 
 const { Content } = Layout;
 const { Title } = Typography;
@@ -17,13 +19,45 @@ export default function Home() {
   const [activeCategory, setActiveCategory] = useState('SOW');
   const [activeCompany, setActiveCompany] = useState(1);
   const [expandedIssues, setExpandedIssues] = useState<number[]>([1]);
-  const [issues, setIssues] = useState(dataManager.getIssues());
   const [categories] = useState(dataManager.getCategories());
   const [issueActions] = useState(dataManager.getStandardIssueActions(handleIssueAction));
   const [actionStatuses, setActionStatuses] = useState<Record<number, string>>({});
   const [activeDropdownId, setActiveDropdownId] = useState<number | null>(null);
   const [checkModalVisible, setCheckModalVisible] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [selectedStoryId, setSelectedStoryId] = useState<number | undefined>(undefined);
+
+  // Select the first story by default when component mounts or category changes
+  useEffect(() => {
+    const stories = dataManager.getStoriesByCategory(activeCategory);
+    if (stories.length > 0) {
+      setSelectedStoryId(stories[0].id);
+      // Reset expanded issues when changing stories
+      setExpandedIssues([]);
+      // Trigger a refresh to load the story's issues
+      setRefreshTrigger(prev => prev + 1);
+    }
+  }, [activeCategory]);
+
+  const fetchIssues = useCallback(async (): Promise<{issues: Issue[], storyTitle?: string, storyId?: number, issueIds?: number[]}> => {
+    // Add a small delay to simulate network latency (remove in production)
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    if (selectedStoryId) {
+      // If a story is selected, load its specific issues and include the story info
+      const story = dataManager.getStoryById(selectedStoryId);
+      const issues = dataManager.getIssuesForStory(selectedStoryId);
+      return { 
+        issues, 
+        storyTitle: story?.title,
+        storyId: selectedStoryId,
+        issueIds: story?.issueIds
+      };
+    } else {
+      // If no story is selected, load all issues for the category
+      return { issues: dataManager.getIssuesByCategory(activeCategory) };
+    }
+  }, [activeCategory, selectedStoryId]);
 
   const handleCheck = () => {
     // Show the check process modal
@@ -53,11 +87,9 @@ export default function Home() {
   }
 
   const updateIssueState = (issueId: number, newState: 'open' | 'solved' | 'dismissed') => {
-    setIssues(prevIssues => 
-      prevIssues.map(issue => 
-        issue.id === issueId ? { ...issue, state: newState } : issue
-      )
-    );
+    const updatedIssue = dataManager.updateIssue(issueId, { state: newState });
+    // Trigger a refresh after updating state
+    setRefreshTrigger(prev => prev + 1);
   };
 
   const toggleExpand = (issueId: number) => {
@@ -66,6 +98,73 @@ export default function Home() {
     } else {
       setExpandedIssues([...expandedIssues, issueId]);
     }
+  };
+
+  const handleSelectStory = (storyId: number) => {
+    // Always set the selected story ID, never deselect
+    setSelectedStoryId(storyId);
+    
+    // Reset expanded issues when changing stories
+    setExpandedIssues([]);
+    
+    // Trigger a refresh to load the story's issues
+    setRefreshTrigger(prev => prev + 1);
+  };
+
+  // Reset story selection when category changes
+  const handleCategoryChange = (category: string) => {
+    setActiveCategory(category);
+    // Don't need to reset selectedStoryId here as the useEffect will set it
+    // Reset expanded issues when changing categories
+    setExpandedIssues([]);
+  };
+
+  // Render content for IssueList when data is successfully fetched
+  const renderIssueListContent = (data: {issues: Issue[], storyTitle?: string, storyId?: number, issueIds?: number[]}) => {
+    return (
+      <>
+        {data.storyTitle && (
+          <div style={{ 
+            marginBottom: '16px', 
+            padding: '12px 16px',
+            backgroundColor: '#f0f0f0',
+            borderRadius: '8px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            <div style={{ 
+              background: '#000', 
+              color: 'white',
+              width: '28px',
+              height: '28px',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '14px'
+            }}>
+              {data.storyTitle.charAt(0)}
+            </div>
+            <div>
+              <Typography.Title level={5} style={{ margin: 0 }}>
+                {data.storyTitle}
+              </Typography.Title>
+            </div>
+          </div>
+        )}
+        <IssueList
+          issues={data.issues}
+          expandedIssues={expandedIssues}
+          issueActions={issueActions}
+          activeDropdownId={activeDropdownId}
+          onToggleExpand={toggleExpand}
+          onIssueAction={handleIssueAction}
+          setActiveDropdownId={setActiveDropdownId}
+          onUpdateIssueState={updateIssueState}
+        />
+      </>
+    );
   };
 
   return (
@@ -174,28 +273,31 @@ export default function Home() {
                       border: 'none',
                       padding: '4px 12px'
                     }}
-                    onClick={() => setActiveCategory(category.id)}
+                    onClick={() => handleCategoryChange(category.id)}
                   >
                     {category.name} ({category.count})
                   </Button>
                 ))}
               </div>
 
-              {/* Statistics Panel */}
+              {/* Story List */}
               <div style={{ marginBottom: '16px' }}>
-                <StatisticsPanel refreshTrigger={refreshTrigger} />
+                <StoryList 
+                  categoryId={activeCategory}
+                  onSelectStory={handleSelectStory}
+                  selectedStoryId={selectedStoryId}
+                />
               </div>
 
               <div style={{ flex: 1, overflow: 'hidden' }}>
-                <IssueList
-                  categoryId={activeCategory}
-                  expandedIssues={expandedIssues}
-                  issueActions={issueActions}
-                  activeDropdownId={activeDropdownId}
-                  onToggleExpand={toggleExpand}
-                  onIssueAction={handleIssueAction}
-                  setActiveDropdownId={setActiveDropdownId}
-                  onUpdateIssueState={updateIssueState}
+                {/* Using DataFetchingContainer to handle all states */}
+                <DataFetchingContainer<{issues: Issue[], storyTitle?: string, storyId?: number, issueIds?: number[]}>
+                  fetchFn={fetchIssues}
+                  renderSuccess={renderIssueListContent}
+                  loadingMessage="Loading issues..."
+                  emptyMessage="No issues found for this selection"
+                  errorTitle="Failed to load issues"
+                  key={refreshTrigger} // Re-fetch when refreshTrigger changes
                 />
               </div>
             </Card>

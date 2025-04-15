@@ -3,6 +3,7 @@ import { Company } from './types';
 import { Issue } from './types';
 import { Statistics } from './types';
 import { IssueAction } from './types';
+import { Story } from './types';
 
 import { categories, updateCategoryCounts } from './categories';
 import { companies, getCompanyById, addCompany, updateCompany } from './companies';
@@ -17,6 +18,12 @@ import {
   updateIssue,
   deleteIssue
 } from './issues';
+import { 
+  stories, 
+  getStoriesByCategory, 
+  getStoryById,
+  getIssuesForStory
+} from './stories';
 
 /**
  * DataManager provides a centralized interface for accessing and managing application data.
@@ -44,6 +51,23 @@ class DataManager {
 
   updateCompany(id: number, updates: Partial<Company>): Company | undefined {
     return updateCompany(id, updates);
+  }
+
+  // Stories
+  getStories(): Story[] {
+    return stories;
+  }
+
+  getStoryById(id: number): Story | undefined {
+    return getStoryById(id);
+  }
+
+  getStoriesByCategory(category: string): Story[] {
+    return getStoriesByCategory(category);
+  }
+
+  getIssuesForStory(storyId: number): Issue[] {
+    return getIssuesForStory(storyId, issues);
   }
 
   // Issues

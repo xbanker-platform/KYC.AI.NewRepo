@@ -16,6 +16,17 @@ export interface Company {
   badge?: string | number;
 }
 
+// Story Types
+export interface Story {
+  id: number;
+  title: string;
+  company: Company;
+  period: string;
+  category: 'SOW' | 'UBO' | 'RISK' | 'CORR';
+  verified: boolean;
+  issueIds: number[];
+}
+
 // Statistics Types
 export interface Statistics {
   kycQuality: number;
