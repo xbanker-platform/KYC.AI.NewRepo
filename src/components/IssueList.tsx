@@ -10,12 +10,13 @@ const { Text } = Typography;
 interface IssueListProps {
   issues: Issue[];
   expandedIssues: number[];
-  issueActions: IssueAction[];
+  issueActions?: IssueAction[];
   activeDropdownId: number | null;
   onToggleExpand: (id: number) => void;
   onIssueAction: (id: number, action: string) => void;
   setActiveDropdownId: (id: number | null) => void;
   onUpdateIssueState: (issueId: number, newState: 'open' | 'solved' | 'dismissed') => void;
+  ownerName?: string;
 }
 
 const IssueList: React.FC<IssueListProps> = ({
@@ -27,8 +28,18 @@ const IssueList: React.FC<IssueListProps> = ({
   onIssueAction,
   setActiveDropdownId,
   onUpdateIssueState,
+  ownerName,
 }) => {
   const [activeState, setActiveState] = useState<'all' | 'open' | 'solved' | 'dismissed'>('all');
+
+  // Calculate maturity progress
+  const calculateMaturityProgress = () => {
+    if (issues.length === 0) return 0;
+    const solvedIssues = issues.filter(issue => issue.state === 'solved').length;
+    return Math.round((solvedIssues / issues.length) * 100);
+  };
+
+  const maturityProgress = calculateMaturityProgress();
 
   // Get current state label for the button
   const getStateLabel = (state: string) => {
@@ -45,7 +56,7 @@ const IssueList: React.FC<IssueListProps> = ({
     switch (state) {
       case 'open': return '#722ed1';
       case 'solved': return '#52c41a';
-      case 'dismissed': return '#ff4d4f';
+      case 'dismissed': return '#9e9e9e';
       default: return '#722ed1';
     }
   };
@@ -92,11 +103,13 @@ const IssueList: React.FC<IssueListProps> = ({
         <div 
           key={issue.id}
           style={{ 
-            marginBottom: '16px',
-            border: `1px solid #e9e9e9`,
+            marginBottom: '12px',
+            border: '1px solid #e8e8e8',
             borderLeft: `4px solid ${stateColor}`,
-            borderRadius: '8px',
-            overflow: 'hidden'
+            borderRadius: '6px',
+            overflow: 'hidden',
+            backgroundColor: 'white',
+            transition: 'all 0.2s ease'
           }}
         >
           {/* Issue Header */}
@@ -105,9 +118,8 @@ const IssueList: React.FC<IssueListProps> = ({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              padding: '16px 24px',
+              padding: '14px 16px',
               backgroundColor: 'white',
-              borderBottom: isExpanded ? '1px solid #e9e9e9' : 'none',
               cursor: 'pointer'
             }}
             onClick={() => onToggleExpand(issue.id)}
@@ -116,82 +128,66 @@ const IssueList: React.FC<IssueListProps> = ({
               <div style={{ 
                 backgroundColor: stateColor, 
                 color: 'white', 
-                width: '24px', 
-                height: '24px', 
+                width: '22px', 
+                height: '22px', 
                 borderRadius: '50%',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                marginRight: '10px'
+                marginRight: '12px',
+                fontSize: '12px',
+                fontWeight: 'bold'
               }}>
-                {issue.badge || <QuestionCircleOutlined style={{ fontSize: '14px' }} />}
+                {issue.badge || 
+                 (issue.state === 'open' ? '2' : 
+                  issue.state === 'solved' ? '✓' : 
+                  'G')}
               </div>
-              <div>
-                <Text style={{ fontSize: '16px', fontWeight: 'bold', display: 'block' }}>
-                  {issue.title}
-                </Text>
-              </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <Text style={{ fontSize: '12px', color: stateColor }}>
-                {getStateLabel(issue.state)}
+              <Text style={{ fontSize: '15px', fontWeight: 'bold', color: '#333' }}>
+                {issue.title}
               </Text>
-              <Button 
-                type="text"
-                icon={isExpanded ? <UpOutlined /> : <DownOutlined />}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onToggleExpand(issue.id);
-                }}
-              />
-              <Dropdown menu={{ items }} placement="bottomRight" trigger={['click']}>
-                <Button 
-                  style={{ 
-                    borderColor: '#e8e8e8',
-                    borderRadius: '6px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    padding: '4px 15px',
-                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
-                  }}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {issue.state === 'open' ? 'Solve' : getStateLabel(issue.state)} <DownOutlined style={{ fontSize: '10px', marginLeft: '5px', color: '#888' }} />
-                </Button>
-              </Dropdown>
             </div>
+            <Button 
+              type="text"
+              style={{ padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              icon={isExpanded ? <UpOutlined style={{ fontSize: '12px' }} /> : <DownOutlined style={{ fontSize: '12px' }} />}
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleExpand(issue.id);
+              }}
+            />
           </div>
           
           {/* Issue Details */}
           {isExpanded && (
-            <div style={{ padding: '24px', backgroundColor: '#f9f9f9' }}>
-              <div style={{ color: '#666', marginBottom: '20px' }}>
+            <div style={{ padding: '0 16px 16px', backgroundColor: 'white', borderTop: '1px solid #f0f0f0' }}>
+              <div style={{ color: '#666', marginTop: '12px', fontSize: '14px' }}>
                 {issue.description}
               </div>
               
-              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
-                <Text style={{ marginRight: '10px' }}>Materiality</Text>
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
+                <Text style={{ marginRight: '8px' }}>Materiality</Text>
                 <Text strong style={{ color: '#52c41a' }}>{issue.materiality}%</Text>
-                <div style={{ flex: 1, marginLeft: '10px' }}>
+                <div style={{ flex: 1, marginLeft: '8px' }}>
                   <Progress percent={issue.materiality} status="active" strokeColor={stateColor} />
                 </div>
               </div>
 
               <div>
-                <div style={{ marginTop: '16px' }}>
-                  <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>Missing requirements:</div>
-                  <ul style={{ paddingLeft: '20px', color: '#666', listStyleType: 'disc' }}>
+                <div style={{ marginTop: '12px' }}>
+                  <div style={{ fontWeight: 'bold', marginBottom: '6px' }}>Missing requirements:</div>
+                  <ul style={{ paddingLeft: '20px', color: '#666', listStyleType: 'disc', margin: '0' }}>
                     {issue.requirements.map((req, index) => (
-                      <li key={index} style={{ marginBottom: '8px' }}>{req}</li>
+                      <li key={index} style={{ marginBottom: '6px' }}>{req}</li>
                     ))}
                   </ul>
                 </div>
                 
-                <div style={{ marginTop: '20px' }}>
-                  <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>Considerations</div>
-                  <ul style={{ paddingLeft: '20px', color: '#666', listStyleType: 'disc' }}>
+                <div style={{ marginTop: '16px' }}>
+                  <div style={{ fontWeight: 'bold', marginBottom: '6px' }}>Considerations</div>
+                  <ul style={{ paddingLeft: '20px', color: '#666', listStyleType: 'disc', margin: '0' }}>
                     {issue.considerations.map((con, index) => (
-                      <li key={index} style={{ marginBottom: '8px' }}>{con}</li>
+                      <li key={index} style={{ marginBottom: '6px' }}>{con}</li>
                     ))}
                   </ul>
                 </div>
@@ -199,76 +195,144 @@ const IssueList: React.FC<IssueListProps> = ({
                 {/* Action buttons row */}
                 <div style={{ 
                   display: 'flex', 
-                  gap: '10px', 
-                  marginTop: '30px',
+                  gap: '12px', 
+                  marginTop: '20px',
                   borderTop: '1px solid #e0e0e0',
-                  paddingTop: '20px',
+                  paddingTop: '16px',
                   flexWrap: 'wrap'
                 }}>
-                  {/* Default action buttons */}
-                  <Button 
-                    style={{ 
-                      display: 'flex',
-                      alignItems: 'center',
-                      padding: '0 16px',
-                      height: '40px'
-                    }}
-                    icon={<span style={{ marginRight: '8px' }}>📂</span>}
-                  >
-                    Upload Document
-                  </Button>
-                  <Button 
-                    style={{ 
-                      display: 'flex',
-                      alignItems: 'center',
-                      padding: '0 16px',
-                      height: '40px'
-                    }}
-                    icon={<span style={{ marginRight: '8px' }}>📋</span>}
-                  >
-                    Search Rules
-                  </Button>
-
-                  {/* Issue-specific actions */}
-                  <div className={styles.issueActions}>
-                    {issueActions.map((action, index) => (
-                      <Button
-                        key={index}
-                        type={action.type}
-                        onClick={() => action.onClick(issue.id)}
-                      >
-                        {action.label}
-                      </Button>
-                    ))}
+                  <div style={{ 
+                    width: 'calc(50% - 6px)', 
+                    border: '1px solid #e0e0e0', 
+                    borderRadius: '6px',
+                    padding: '12px'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', marginBottom: '6px' }}>
+                      <span style={{ marginRight: '8px', fontSize: '16px' }}>📂</span>
+                      <Text strong>Upload Document</Text>
+                    </div>
+                    <Text type="secondary" style={{ fontSize: '12px' }}>
+                      Upload supporting documents for verification
+                    </Text>
+                  </div>
+                  
+                  <div style={{ 
+                    width: 'calc(50% - 6px)', 
+                    border: '1px solid #e0e0e0', 
+                    borderRadius: '6px',
+                    padding: '12px'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', marginBottom: '6px' }}>
+                      <span style={{ marginRight: '8px', fontSize: '16px' }}>💡</span>
+                      <Text strong>Get Suggestions</Text>
+                    </div>
+                    <Text type="secondary" style={{ fontSize: '12px' }}>
+                      AI-powered recommendations for risk mitigation
+                    </Text>
+                  </div>
+                  
+                  <div style={{ 
+                    width: 'calc(50% - 6px)', 
+                    border: '1px solid #e0e0e0', 
+                    borderRadius: '6px',
+                    padding: '12px'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', marginBottom: '6px' }}>
+                      <span style={{ marginRight: '8px', fontSize: '16px' }}>🔍</span>
+                      <Text strong>AI Search</Text>
+                    </div>
+                    <Text type="secondary" style={{ fontSize: '12px' }}>
+                      Profile intelligence with AI assistance
+                    </Text>
+                  </div>
+                  
+                  <div style={{ 
+                    width: 'calc(50% - 6px)', 
+                    border: '1px solid #e0e0e0', 
+                    borderRadius: '6px',
+                    padding: '12px'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', marginBottom: '6px' }}>
+                      <span style={{ marginRight: '8px', fontSize: '16px' }}>📋</span>
+                      <Text strong>Search Rules</Text>
+                    </div>
+                    <Text type="secondary" style={{ fontSize: '12px' }}>
+                      Find relevant compliance rules
+                    </Text>
                   </div>
                 </div>
 
-                {/* AI Assistant input */}
+                {/* Bottom controls section */}
                 <div style={{ 
                   display: 'flex', 
-                  marginTop: '20px',
-                  gap: '10px'
+                  marginTop: '16px',
+                  gap: '8px',
+                  alignItems: 'center'
                 }}>
-                  <input 
-                    placeholder="Ask AI Assistant..."
-                    style={{
-                      flex: 1,
-                      borderRadius: '4px',
-                      border: '1px solid #d9d9d9',
-                      padding: '8px 12px',
-                      fontSize: '14px'
-                    }}
-                  />
-                  <Button 
-                    type="primary" 
-                    style={{ 
-                      backgroundColor: '#722ed1', 
-                      borderColor: '#722ed1',
-                      borderRadius: '4px'
-                    }}
-                  >
-                    Send
-                  </Button>
+                  {/* AI Assistant input with chat icon */}
+                  <div style={{ 
+                    display: 'flex',
+                    alignItems: 'center',
+                    flex: 1,
+                    backgroundColor: '#f6f3ff',
+                    borderRadius: '6px',
+                    padding: '6px 10px'
+                  }}>
+                    <span style={{ color: '#722ed1', fontSize: '16px', marginRight: '6px' }}>💬</span>
+                    <input 
+                      placeholder="Ask AI Assistant..."
+                      style={{
+                        flex: 1,
+                        border: 'none',
+                        backgroundColor: 'transparent',
+                        padding: '4px 0',
+                        fontSize: '13px',
+                        outline: 'none'
+                      }}
+                    />
+                    
+                    {/* Send button */}
+                    <Button 
+                      type="primary" 
+                      style={{ 
+                        backgroundColor: '#722ed1', 
+                        borderColor: '#722ed1',
+                        borderRadius: '6px',
+                        height: '28px',
+                        fontSize: '13px',
+                        padding: '0 12px',
+                        display: 'flex',
+                        alignItems: 'center'
+                      }}
+                      size="small"
+                    >
+                      Send <span style={{ marginLeft: '3px' }}>&gt;</span>
+                    </Button>
+                  </div>
+
+                  {/* State dropdown */}
+                  <Dropdown menu={{ items }} placement="bottomRight" trigger={['click']}>
+                    <Button 
+                      style={{ 
+                        borderColor: '#e8e8e8',
+                        backgroundColor: '#fff',
+                        borderRadius: '6px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        padding: '4px 12px',
+                        boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                        width: '100px',
+                        justifyContent: 'space-between',
+                        height: '28px'
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <span style={{ color: stateColor, fontSize: '13px', fontWeight: 'medium' }}>
+                        {getStateLabel(issue.state)}
+                      </span>
+                      <DownOutlined style={{ fontSize: '10px', color: '#888' }} />
+                    </Button>
+                  </Dropdown>
                 </div>
               </div>
             </div>
@@ -298,14 +362,80 @@ const IssueList: React.FC<IssueListProps> = ({
     <div className={styles.issueListContainer} style={{ 
       background: 'white', 
       borderRadius: '8px', 
-      padding: '16px', 
+      padding: '12px 8px 8px 8px', 
       border: '1px solid #e0e0e0',
       height: '100%',
       display: 'flex',
       flexDirection: 'column',
       overflow: 'hidden'
     }}>
-      <div style={{ flex: 1, overflow: 'auto' }}>
+      <div style={{ flex: 1, overflow: 'auto', paddingRight: '4px' }}>
+        {/* Maturity Progress Section */}
+        <div style={{ 
+          marginBottom: '12px', 
+          padding: '10px',
+          backgroundColor: '#f9f9f9',
+          borderRadius: '6px',
+          border: '1px solid #e9e9e9'
+        }}>
+          {/* Owner Review Header */}
+          {ownerName && (
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              marginBottom: '8px'
+            }}>
+              <div style={{ 
+                width: '22px', 
+                height: '22px', 
+                borderRadius: '50%', 
+                backgroundColor: '#000', 
+                color: '#fff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '11px',
+                fontWeight: 'bold',
+                marginRight: '6px'
+              }}>
+                O
+              </div>
+              <Text style={{ fontWeight: 'bold', fontSize: '14px' }}>
+                Owner Review: {ownerName}
+              </Text>
+            </div>
+          )}
+          
+          {/* Progress bar */}
+          <Progress 
+            percent={maturityProgress} 
+            status={maturityProgress === 100 ? "success" : "active"} 
+            strokeColor={maturityProgress === 100 ? "#52c41a" : "#ff4d4f"} 
+            strokeWidth={8}
+            trailColor="#f0f0f0"
+            showInfo={false}
+          />
+          
+          {/* Progress information */}
+          <div style={{ marginTop: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            {/* Incomplete parts text */}
+            {maturityProgress < 100 && (
+              <div style={{ fontSize: '12px', color: '#ff7a45' }}>
+                <Text>Incomplete: </Text>
+                {Array.from(new Set(issues.filter(issue => issue.state === 'open').map(issue => issue.category))).map((category, index, arr) => (
+                  <Text key={category}>
+                    {category}{index < arr.length - 1 ? ', ' : ''}
+                  </Text>
+                ))}
+              </div>
+            )}
+            
+            <Text style={{ color: maturityProgress === 100 ? "#52c41a" : "#ff4d4f", fontWeight: 'bold', fontSize: '14px' }}>
+              {maturityProgress}% Complete
+            </Text>
+          </div>
+        </div>
+        
         {renderIssues()}
       </div>
     </div>

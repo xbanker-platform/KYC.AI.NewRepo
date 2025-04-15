@@ -122,48 +122,17 @@ export default function Home() {
   // Render content for IssueList when data is successfully fetched
   const renderIssueListContent = (data: {issues: Issue[], storyTitle?: string, storyId?: number, issueIds?: number[]}) => {
     return (
-      <>
-        {data.storyTitle && (
-          <div style={{ 
-            marginBottom: '16px', 
-            padding: '12px 16px',
-            backgroundColor: '#f0f0f0',
-            borderRadius: '8px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px'
-          }}>
-            <div style={{ 
-              background: '#000', 
-              color: 'white',
-              width: '28px',
-              height: '28px',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '14px'
-            }}>
-              {data.storyTitle.charAt(0)}
-            </div>
-            <div>
-              <Typography.Title level={5} style={{ margin: 0 }}>
-                {data.storyTitle}
-              </Typography.Title>
-            </div>
-          </div>
-        )}
-        <IssueList
-          issues={data.issues}
-          expandedIssues={expandedIssues}
-          issueActions={issueActions}
-          activeDropdownId={activeDropdownId}
-          onToggleExpand={toggleExpand}
-          onIssueAction={handleIssueAction}
-          setActiveDropdownId={setActiveDropdownId}
-          onUpdateIssueState={updateIssueState}
-        />
-      </>
+      <IssueList
+        issues={data.issues}
+        expandedIssues={expandedIssues}
+        issueActions={issueActions}
+        activeDropdownId={activeDropdownId}
+        onToggleExpand={toggleExpand}
+        onIssueAction={handleIssueAction}
+        setActiveDropdownId={setActiveDropdownId}
+        onUpdateIssueState={updateIssueState}
+        ownerName="Xiamen Limbach"
+      />
     );
   };
 
