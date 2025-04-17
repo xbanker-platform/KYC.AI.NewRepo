@@ -438,11 +438,14 @@ const IssueList: React.FC<IssueListProps> = ({
             {maturityProgress < 100 && (
               <div style={{ fontSize: '12px', color: '#ff7a45' }}>
                 <Text>Incomplete: </Text>
-                {Array.from(new Set(issues.filter(issue => issue.state === 'open').map(issue => issue.category))).map((category, index, arr) => (
-                  <Text key={category}>
-                    {category}{index < arr.length - 1 ? ', ' : ''}
-                  </Text>
-                ))}
+                {Array.from(new Set(issues.filter(issue => issue.state === 'open')
+                  .map(issue => issue.category)))
+                  .sort() // Sort categories for consistent display
+                  .map((category, index, arr) => (
+                    <Text key={category}>
+                      {category}{index < arr.length - 1 ? ', ' : ''}
+                    </Text>
+                  ))}
               </div>
             )}
             
