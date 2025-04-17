@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { Space, Card, Typography, Button, Progress, Tag, Dropdown } from 'antd';
-import { QuestionCircleOutlined, CheckCircleFilled, DownOutlined, UpOutlined } from '@ant-design/icons';
+import { Typography, Button, Progress, Dropdown } from 'antd';
+import { DownOutlined, UpOutlined } from '@ant-design/icons';
 import type { Issue, IssueAction } from '@/data/types';
 import styles from '../app/page.module.css';
-import { dataManager } from '@/data';
+import CorroborationIssueCard from './CorroborationIssueCard';
 
 const { Text } = Typography;
 
@@ -17,6 +17,8 @@ interface IssueListProps {
   setActiveDropdownId: (id: number | null) => void;
   onUpdateIssueState: (issueId: number, newState: 'open' | 'solved' | 'dismissed') => void;
   ownerName?: string;
+  storyTitle?: string;
+  storyId?: number;
 }
 
 const IssueList: React.FC<IssueListProps> = ({
@@ -29,6 +31,8 @@ const IssueList: React.FC<IssueListProps> = ({
   setActiveDropdownId,
   onUpdateIssueState,
   ownerName,
+  storyTitle,
+  storyId,
 }) => {
   const [activeState, setActiveState] = useState<'all' | 'open' | 'solved' | 'dismissed'>('all');
 
@@ -77,6 +81,20 @@ const IssueList: React.FC<IssueListProps> = ({
   // Render each issue as an expandable card
   const renderIssues = () => {
     return sortedIssues.map(issue => {
+      // For corroboration issues, use the specialized component
+      if (issue.category === 'CORR') {
+        return (
+          <CorroborationIssueCard
+            key={issue.id}
+            issue={issue}
+            isExpanded={expandedIssues.includes(issue.id)}
+            onToggleExpand={onToggleExpand}
+            onUpdateIssueState={onUpdateIssueState}
+          />
+        );
+      }
+      
+      // Standard issue card rendering for non-corroboration issues
       const isExpanded = expandedIssues.includes(issue.id);
       const stateColor = getStateColor(issue.state);
 
@@ -378,33 +396,31 @@ const IssueList: React.FC<IssueListProps> = ({
           borderRadius: '6px',
           border: '1px solid #e9e9e9'
         }}>
-          {/* Owner Review Header */}
-          {ownerName && (
+          {/* Owner Review Header with Story Title */}
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            marginBottom: '8px'
+          }}>
             <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              marginBottom: '8px'
+              width: '22px', 
+              height: '22px', 
+              borderRadius: '50%', 
+              backgroundColor: '#000', 
+              color: '#fff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '11px',
+              fontWeight: 'bold',
+              marginRight: '6px'
             }}>
-              <div style={{ 
-                width: '22px', 
-                height: '22px', 
-                borderRadius: '50%', 
-                backgroundColor: '#000', 
-                color: '#fff',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '11px',
-                fontWeight: 'bold',
-                marginRight: '6px'
-              }}>
-                O
-              </div>
-              <Text style={{ fontWeight: 'bold', fontSize: '14px' }}>
-                Owner Review: {ownerName}
-              </Text>
+              O
             </div>
-          )}
+            <Text style={{ fontWeight: 'bold', fontSize: '14px', flex: 1 }}>
+              {storyTitle ? `${storyTitle} - ${ownerName}` : `Owner Review: ${ownerName}`}
+            </Text>
+          </div>
           
           {/* Progress bar */}
           <Progress 
