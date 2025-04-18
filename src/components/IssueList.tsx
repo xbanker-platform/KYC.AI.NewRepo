@@ -4,6 +4,7 @@ import { DownOutlined, UpOutlined } from '@ant-design/icons';
 import type { Issue, IssueAction } from '@/data/types';
 import styles from '../app/page.module.css';
 import CorroborationIssueCard from './CorroborationIssueCard';
+import CorroborationSupportCard, { SupportItem } from './CorroborationSupportCard';
 
 const { Text } = Typography;
 
@@ -19,6 +20,9 @@ interface IssueListProps {
   ownerName?: string;
   storyTitle?: string;
   storyId?: number;
+  isCorrCategory?: boolean;
+  supportingDocs?: SupportItem[];
+  mentionedLinks?: SupportItem[];
 }
 
 const IssueList: React.FC<IssueListProps> = ({
@@ -33,6 +37,9 @@ const IssueList: React.FC<IssueListProps> = ({
   ownerName,
   storyTitle,
   storyId,
+  isCorrCategory,
+  supportingDocs = [],
+  mentionedLinks = [],
 }) => {
   const [activeState, setActiveState] = useState<'all' | 'open' | 'solved' | 'dismissed'>('all');
 
@@ -361,7 +368,7 @@ const IssueList: React.FC<IssueListProps> = ({
   };
 
   // Check if there are any issues to display
-  if (issues.length === 0) {
+  if (issues.length === 0 && !isCorrCategory) {
     return (
       <div style={{ 
         textAlign: 'center', 
@@ -454,8 +461,30 @@ const IssueList: React.FC<IssueListProps> = ({
             </Text>
           </div>
         </div>
+
+        {/* Corroboration Support Cards - only shown for CORR category */}
+        {isCorrCategory && (
+          <>
+            {supportingDocs && supportingDocs.length > 0 && (
+              <CorroborationSupportCard 
+                type="document" 
+                items={supportingDocs} 
+                storyTitle={storyTitle}
+              />
+            )}
+            
+            {mentionedLinks && mentionedLinks.length > 0 && (
+              <CorroborationSupportCard 
+                type="link" 
+                items={mentionedLinks} 
+                storyTitle={storyTitle}
+              />
+            )}
+          </>
+        )}
         
-        {renderIssues()}
+        {/* Only render regular issues if we have them */}
+        {issues.length > 0 && renderIssues()}
       </div>
     </div>
   );

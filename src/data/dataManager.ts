@@ -24,6 +24,11 @@ import {
   getStoryById,
   getIssuesForStory
 } from './stories';
+import {
+  getSupportingDocuments,
+  getMentionedLinks,
+  getCorroborationSupport
+} from './corroborationSupport';
 
 /**
  * DataManager provides a centralized interface for accessing and managing application data.
@@ -118,6 +123,19 @@ class DataManager {
     return updateCategoryCounts(categories, issues);
   }
 
+  // Get corroboration specific support data
+  getSupportingDocuments(storyId: number) {
+    return getSupportingDocuments(storyId);
+  }
+
+  getMentionedLinks(storyId: number) {
+    return getMentionedLinks(storyId);
+  }
+
+  getCorroborationSupport(storyId: number) {
+    return getCorroborationSupport(storyId);
+  }
+
   // Get standard issue actions that can be used by components
   getStandardIssueActions(onIssueAction: (id: number, action: string) => void): IssueAction[] {
     return [
@@ -125,6 +143,27 @@ class DataManager {
         label: 'Approve',
         type: 'primary',
         onClick: (id: number) => onIssueAction(id, 'approve')
+      },
+      {
+        label: 'Reject',
+        type: 'default',
+        onClick: (id: number) => onIssueAction(id, 'reject')
+      }
+    ];
+  }
+
+  // Get corroboration-specific issue actions
+  getCorroborationIssueActions(onIssueAction: (id: number, action: string) => void): IssueAction[] {
+    return [
+      {
+        label: 'Verify',
+        type: 'primary',
+        onClick: (id: number) => onIssueAction(id, 'verify')
+      },
+      {
+        label: 'Request More Info',
+        type: 'default',
+        onClick: (id: number) => onIssueAction(id, 'request_info')
       },
       {
         label: 'Reject',

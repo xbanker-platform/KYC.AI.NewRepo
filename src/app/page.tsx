@@ -10,6 +10,7 @@ import CheckProcess from '@/components/CheckProcess';
 import DataFetchingContainer from '@/components/DataFetchingContainer';
 import { dataManager } from '@/data';
 import { Issue } from '@/data/types';
+import { SupportItem } from '@/components/CorroborationSupportCard';
 
 const { Content } = Layout;
 const { Title } = Typography;
@@ -48,7 +49,15 @@ export default function Home() {
     }
   };
 
-  const fetchIssues = useCallback(async (): Promise<{issues: Issue[], storyTitle?: string, storyId?: number, issueIds?: number[]}> => {
+  const fetchIssues = useCallback(async (): Promise<{
+    issues: Issue[], 
+    storyTitle?: string, 
+    storyId?: number, 
+    issueIds?: number[],
+    isCorrCategory?: boolean,
+    supportingDocs?: SupportItem[],
+    mentionedLinks?: SupportItem[]
+  }> => {
     // Add a small delay to simulate network latency (remove in production)
     await new Promise(resolve => setTimeout(resolve, 500));
     
@@ -62,6 +71,28 @@ export default function Home() {
         updateIssueActionsForCategory(story.category);
       }
       
+      // Special handling for CORR category - fetch supporting docs and links
+      const isCorrCategory = story?.category === 'CORR';
+      let supportingDocs, mentionedLinks;
+      
+      if (isCorrCategory) {
+        const support = dataManager.getCorroborationSupport(selectedStoryId);
+        supportingDocs = support.documents;
+        mentionedLinks = support.links;
+        
+        // For CORR category, we don't show regular issues, just the support cards
+        return { 
+          issues: [], // Empty array for CORR category 
+          storyTitle: story?.title,
+          storyId: selectedStoryId,
+          issueIds: story?.issueIds,
+          isCorrCategory,
+          supportingDocs,
+          mentionedLinks
+        };
+      }
+      
+      // For non-CORR categories, return the issues
       return { 
         issues, 
         storyTitle: story?.title,
@@ -135,7 +166,15 @@ export default function Home() {
   };
 
   // Render content for IssueList when data is successfully fetched
-  const renderIssueListContent = (data: {issues: Issue[], storyTitle?: string, storyId?: number, issueIds?: number[]}) => {
+  const renderIssueListContent = (data: {
+    issues: Issue[], 
+    storyTitle?: string, 
+    storyId?: number, 
+    issueIds?: number[],
+    isCorrCategory?: boolean,
+    supportingDocs?: SupportItem[],
+    mentionedLinks?: SupportItem[]
+  }) => {
     return (
       <IssueList
         issues={data.issues}
@@ -149,6 +188,9 @@ export default function Home() {
         ownerName="Xiamen Limbach"
         storyTitle={data.storyTitle}
         storyId={data.storyId}
+        isCorrCategory={data.isCorrCategory}
+        supportingDocs={data.supportingDocs}
+        mentionedLinks={data.mentionedLinks}
       />
     );
   };
@@ -277,7 +319,15 @@ export default function Home() {
 
               <div style={{ flex: 1, overflow: 'hidden' }}>
                 {/* Using DataFetchingContainer to handle all states */}
-                <DataFetchingContainer<{issues: Issue[], storyTitle?: string, storyId?: number, issueIds?: number[]}>
+                <DataFetchingContainer<{
+                  issues: Issue[], 
+                  storyTitle?: string, 
+                  storyId?: number, 
+                  issueIds?: number[],
+                  isCorrCategory?: boolean,
+                  supportingDocs?: SupportItem[],
+                  mentionedLinks?: SupportItem[]
+                }>
                   fetchFn={fetchIssues}
                   renderSuccess={renderIssueListContent}
                   loadingMessage="Loading issues..."
