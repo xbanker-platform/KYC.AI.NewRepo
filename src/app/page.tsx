@@ -4,23 +4,24 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Layout, Row, Col, Card, Button, Space, Typography } from 'antd';
 import { EyeOutlined, MessageOutlined, CheckOutlined } from '@ant-design/icons';
 import Editor from '@/components/Editor';
-import CategoryTabs from '@/components/CategoryTabs';
 import IssueList from '@/components/IssueList';
 import StoryList from '@/components/StoryList';
 import CheckProcess from '@/components/CheckProcess';
 import DataFetchingContainer from '@/components/DataFetchingContainer';
 import { dataManager } from '@/data';
 import { Issue } from '@/data/types';
+import { SupportItem } from '@/components/CorroborationSupportCard';
+import CorrCategoryStoryList from '@/components/CorrCategoryStoryList';
+import { CORR_STORY_TITLE_MAP } from '@/components/CorrCategoryStoryList';
 
 const { Content } = Layout;
 const { Title } = Typography;
 
 export default function Home() {
   const [activeCategory, setActiveCategory] = useState('SOW');
-  const [activeCompany, setActiveCompany] = useState(1);
   const [expandedIssues, setExpandedIssues] = useState<number[]>([1]);
   const [categories] = useState(dataManager.getCategories());
-  const [issueActions] = useState(dataManager.getStandardIssueActions(handleIssueAction));
+  const [issueActions, setIssueActions] = useState(dataManager.getStandardIssueActions(handleIssueAction));
   const [actionStatuses, setActionStatuses] = useState<Record<number, string>>({});
   const [activeDropdownId, setActiveDropdownId] = useState<number | null>(null);
   const [checkModalVisible, setCheckModalVisible] = useState(false);
@@ -34,12 +35,31 @@ export default function Home() {
       setSelectedStoryId(stories[0].id);
       // Reset expanded issues when changing stories
       setExpandedIssues([]);
+      // Update issue actions based on category
+      updateIssueActionsForCategory(activeCategory);
       // Trigger a refresh to load the story's issues
       setRefreshTrigger(prev => prev + 1);
     }
   }, [activeCategory]);
 
-  const fetchIssues = useCallback(async (): Promise<{issues: Issue[], storyTitle?: string, storyId?: number, issueIds?: number[]}> => {
+  // Update issue actions based on selected category
+  const updateIssueActionsForCategory = (category: string) => {
+    if (category === 'CORR') {
+      setIssueActions(dataManager.getCorroborationIssueActions(handleIssueAction));
+    } else {
+      setIssueActions(dataManager.getStandardIssueActions(handleIssueAction));
+    }
+  };
+
+  const fetchIssues = useCallback(async (): Promise<{
+    issues: Issue[], 
+    storyTitle?: string, 
+    storyId?: number, 
+    issueIds?: number[],
+    isCorrCategory?: boolean,
+    supportingDocs?: SupportItem[],
+    mentionedLinks?: SupportItem[]
+  }> => {
     // Add a small delay to simulate network latency (remove in production)
     await new Promise(resolve => setTimeout(resolve, 500));
     
@@ -47,6 +67,34 @@ export default function Home() {
       // If a story is selected, load its specific issues and include the story info
       const story = dataManager.getStoryById(selectedStoryId);
       const issues = dataManager.getIssuesForStory(selectedStoryId);
+      
+      // Update the issue actions based on the story's category
+      if (story && story.category) {
+        updateIssueActionsForCategory(story.category);
+      }
+      
+      // Special handling for CORR category - fetch supporting docs and links
+      const isCorrCategory = story?.category === 'CORR';
+      let supportingDocs, mentionedLinks;
+      
+      if (isCorrCategory) {
+        const support = dataManager.getCorroborationSupport(selectedStoryId);
+        supportingDocs = support.documents;
+        mentionedLinks = support.links;
+        
+        // For CORR category, we don't show regular issues, just the support cards
+        return { 
+          issues: [], // Empty array for CORR category 
+          storyTitle: story?.title,
+          storyId: selectedStoryId,
+          issueIds: story?.issueIds,
+          isCorrCategory,
+          supportingDocs,
+          mentionedLinks
+        };
+      }
+      
+      // For non-CORR categories, return the issues
       return { 
         issues, 
         storyTitle: story?.title,
@@ -120,7 +168,15 @@ export default function Home() {
   };
 
   // Render content for IssueList when data is successfully fetched
-  const renderIssueListContent = (data: {issues: Issue[], storyTitle?: string, storyId?: number, issueIds?: number[]}) => {
+  const renderIssueListContent = (data: {
+    issues: Issue[], 
+    storyTitle?: string, 
+    storyId?: number, 
+    issueIds?: number[],
+    isCorrCategory?: boolean,
+    supportingDocs?: SupportItem[],
+    mentionedLinks?: SupportItem[]
+  }) => {
     return (
       <IssueList
         issues={data.issues}
@@ -132,6 +188,11 @@ export default function Home() {
         setActiveDropdownId={setActiveDropdownId}
         onUpdateIssueState={updateIssueState}
         ownerName="Xiamen Limbach"
+        storyTitle={data.storyTitle}
+        storyId={data.storyId}
+        isCorrCategory={data.isCorrCategory}
+        supportingDocs={data.supportingDocs}
+        mentionedLinks={data.mentionedLinks}
       />
     );
   };
@@ -249,18 +310,34 @@ export default function Home() {
                 ))}
               </div>
 
-              {/* Story List */}
-              <div style={{ marginBottom: '16px' }}>
-                <StoryList 
-                  categoryId={activeCategory}
-                  onSelectStory={handleSelectStory}
-                  selectedStoryId={selectedStoryId}
-                />
+              {/* Story List - use special version for CORR category */}
+              <div style={{ marginBottom: '8px' }}>
+                {activeCategory === 'CORR' ? (
+                  <CorrCategoryStoryList 
+                    stories={dataManager.getStoriesByCategory(activeCategory)}
+                    onSelectStory={handleSelectStory}
+                    selectedStoryId={selectedStoryId}
+                  />
+                ) : (
+                  <StoryList 
+                    categoryId={activeCategory}
+                    onSelectStory={handleSelectStory}
+                    selectedStoryId={selectedStoryId}
+                  />
+                )}
               </div>
 
               <div style={{ flex: 1, overflow: 'hidden' }}>
                 {/* Using DataFetchingContainer to handle all states */}
-                <DataFetchingContainer<{issues: Issue[], storyTitle?: string, storyId?: number, issueIds?: number[]}>
+                <DataFetchingContainer<{
+                  issues: Issue[], 
+                  storyTitle?: string, 
+                  storyId?: number, 
+                  issueIds?: number[],
+                  isCorrCategory?: boolean,
+                  supportingDocs?: SupportItem[],
+                  mentionedLinks?: SupportItem[]
+                }>
                   fetchFn={fetchIssues}
                   renderSuccess={renderIssueListContent}
                   loadingMessage="Loading issues..."

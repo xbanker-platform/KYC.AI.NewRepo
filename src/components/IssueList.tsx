@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
-import { Space, Card, Typography, Button, Progress, Tag, Dropdown } from 'antd';
-import { QuestionCircleOutlined, CheckCircleFilled, DownOutlined, UpOutlined } from '@ant-design/icons';
+import { Typography, Button, Progress, Dropdown } from 'antd';
+import { DownOutlined, UpOutlined } from '@ant-design/icons';
 import type { Issue, IssueAction } from '@/data/types';
 import styles from '../app/page.module.css';
-import { dataManager } from '@/data';
+import CorroborationIssueCard from './CorroborationIssueCard';
+import CorroborationSupportCard, { SupportItem } from './CorroborationSupportCard';
+import CorrCategoryView from './CorrCategoryView';
+import { CORR_STORY_TITLE_MAP } from './CorrCategoryStoryList';
 
 const { Text } = Typography;
 
@@ -17,6 +20,11 @@ interface IssueListProps {
   setActiveDropdownId: (id: number | null) => void;
   onUpdateIssueState: (issueId: number, newState: 'open' | 'solved' | 'dismissed') => void;
   ownerName?: string;
+  storyTitle?: string;
+  storyId?: number;
+  isCorrCategory?: boolean;
+  supportingDocs?: SupportItem[];
+  mentionedLinks?: SupportItem[];
 }
 
 const IssueList: React.FC<IssueListProps> = ({
@@ -29,6 +37,11 @@ const IssueList: React.FC<IssueListProps> = ({
   setActiveDropdownId,
   onUpdateIssueState,
   ownerName,
+  storyTitle,
+  storyId,
+  isCorrCategory,
+  supportingDocs = [],
+  mentionedLinks = [],
 }) => {
   const [activeState, setActiveState] = useState<'all' | 'open' | 'solved' | 'dismissed'>('all');
 
@@ -77,6 +90,20 @@ const IssueList: React.FC<IssueListProps> = ({
   // Render each issue as an expandable card
   const renderIssues = () => {
     return sortedIssues.map(issue => {
+      // For corroboration issues, use the specialized component
+      if (issue.category === 'CORR') {
+        return (
+          <CorroborationIssueCard
+            key={issue.id}
+            issue={issue}
+            isExpanded={expandedIssues.includes(issue.id)}
+            onToggleExpand={onToggleExpand}
+            onUpdateIssueState={onUpdateIssueState}
+          />
+        );
+      }
+      
+      // Standard issue card rendering for non-corroboration issues
       const isExpanded = expandedIssues.includes(issue.id);
       const stateColor = getStateColor(issue.state);
 
@@ -343,7 +370,7 @@ const IssueList: React.FC<IssueListProps> = ({
   };
 
   // Check if there are any issues to display
-  if (issues.length === 0) {
+  if (issues.length === 0 && !isCorrCategory) {
     return (
       <div style={{ 
         textAlign: 'center', 
@@ -370,16 +397,16 @@ const IssueList: React.FC<IssueListProps> = ({
       overflow: 'hidden'
     }}>
       <div style={{ flex: 1, overflow: 'auto', paddingRight: '4px' }}>
-        {/* Maturity Progress Section */}
-        <div style={{ 
-          marginBottom: '12px', 
-          padding: '10px',
-          backgroundColor: '#f9f9f9',
-          borderRadius: '6px',
-          border: '1px solid #e9e9e9'
-        }}>
-          {/* Owner Review Header */}
-          {ownerName && (
+        {/* Maturity Progress Section - hide for CORR category */}
+        {!isCorrCategory && (
+          <div style={{ 
+            marginBottom: '12px', 
+            padding: '10px',
+            backgroundColor: '#f9f9f9',
+            borderRadius: '6px',
+            border: '1px solid #e9e9e9'
+          }}>
+            {/* Owner Review Header with Story Title */}
             <div style={{ 
               display: 'flex', 
               alignItems: 'center', 
@@ -400,43 +427,85 @@ const IssueList: React.FC<IssueListProps> = ({
               }}>
                 O
               </div>
-              <Text style={{ fontWeight: 'bold', fontSize: '14px' }}>
-                Owner Review: {ownerName}
+              <Text style={{ fontWeight: 'bold', fontSize: '14px', flex: 1 }}>
+                {storyTitle ? `${storyTitle} - ${ownerName}` : `Owner Review: ${ownerName}`}
               </Text>
             </div>
-          )}
-          
-          {/* Progress bar */}
-          <Progress 
-            percent={maturityProgress} 
-            status={maturityProgress === 100 ? "success" : "active"} 
-            strokeColor={maturityProgress === 100 ? "#52c41a" : "#ff4d4f"} 
-            strokeWidth={8}
-            trailColor="#f0f0f0"
-            showInfo={false}
-          />
-          
-          {/* Progress information */}
-          <div style={{ marginTop: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            {/* Incomplete parts text */}
-            {maturityProgress < 100 && (
-              <div style={{ fontSize: '12px', color: '#ff7a45' }}>
-                <Text>Incomplete: </Text>
-                {Array.from(new Set(issues.filter(issue => issue.state === 'open').map(issue => issue.category))).map((category, index, arr) => (
-                  <Text key={category}>
-                    {category}{index < arr.length - 1 ? ', ' : ''}
-                  </Text>
-                ))}
-              </div>
-            )}
             
-            <Text style={{ color: maturityProgress === 100 ? "#52c41a" : "#ff4d4f", fontWeight: 'bold', fontSize: '14px' }}>
-              {maturityProgress}% Complete
+            {/* Progress bar */}
+            <Progress 
+              percent={maturityProgress} 
+              status={maturityProgress === 100 ? "success" : "active"} 
+              strokeColor={maturityProgress === 100 ? "#52c41a" : "#ff4d4f"} 
+              strokeWidth={8}
+              trailColor="#f0f0f0"
+              showInfo={false}
+            />
+            
+            {/* Progress information */}
+            <div style={{ marginTop: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              {/* Incomplete parts text */}
+              {maturityProgress < 100 && (
+                <div style={{ fontSize: '12px', color: '#ff7a45' }}>
+                  <Text>Incomplete: </Text>
+                  {Array.from(new Set(issues.filter(issue => issue.state === 'open')
+                    .map(issue => issue.category)))
+                    .sort() // Sort categories for consistent display
+                    .map((category, index, arr) => (
+                      <Text key={category}>
+                        {category}{index < arr.length - 1 ? ', ' : ''}
+                      </Text>
+                    ))}
+                </div>
+              )}
+              
+              <Text style={{ color: maturityProgress === 100 ? "#52c41a" : "#ff4d4f", fontWeight: 'bold', fontSize: '14px' }}>
+                {maturityProgress}% Complete
+              </Text>
+            </div>
+          </div>
+        )}
+
+        {/* Show story title for CORR category */}
+        {isCorrCategory && storyId && (
+          <div style={{ 
+            marginBottom: '16px', 
+            display: 'flex', 
+            alignItems: 'center'
+          }}>
+            <div style={{ 
+              width: '22px', 
+              height: '22px', 
+              borderRadius: '50%', 
+              backgroundColor: '#000', 
+              color: '#fff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '11px',
+              fontWeight: 'bold',
+              marginRight: '10px'
+            }}>
+              O
+            </div>
+            <Text style={{ fontWeight: 'bold', fontSize: '16px' }}>
+              {storyId && CORR_STORY_TITLE_MAP[storyId] ? CORR_STORY_TITLE_MAP[storyId] : storyTitle}
             </Text>
           </div>
-        </div>
-        
-        {renderIssues()}
+        )}
+
+        {/* Use CorrCategoryView for CORR category */}
+        {isCorrCategory ? (
+          <CorrCategoryView
+            supportingDocs={supportingDocs}
+            mentionedLinks={mentionedLinks}
+            storyTitle={storyTitle}
+            storyId={storyId}
+          />
+        ) : (
+          /* Only render regular issues if we have them */
+          issues.length > 0 && renderIssues()
+        )}
       </div>
     </div>
   );
