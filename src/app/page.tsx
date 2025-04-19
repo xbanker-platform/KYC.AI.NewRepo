@@ -11,6 +11,8 @@ import DataFetchingContainer from '@/components/DataFetchingContainer';
 import { dataManager } from '@/data';
 import { Issue } from '@/data/types';
 import { SupportItem } from '@/components/CorroborationSupportCard';
+import CorrCategoryStoryList from '@/components/CorrCategoryStoryList';
+import { CORR_STORY_TITLE_MAP } from '@/components/CorrCategoryStoryList';
 
 const { Content } = Layout;
 const { Title } = Typography;
@@ -308,13 +310,21 @@ export default function Home() {
                 ))}
               </div>
 
-              {/* Story List */}
+              {/* Story List - use special version for CORR category */}
               <div style={{ marginBottom: '8px' }}>
-                <StoryList 
-                  categoryId={activeCategory}
-                  onSelectStory={handleSelectStory}
-                  selectedStoryId={selectedStoryId}
-                />
+                {activeCategory === 'CORR' ? (
+                  <CorrCategoryStoryList 
+                    stories={dataManager.getStoriesByCategory(activeCategory)}
+                    onSelectStory={handleSelectStory}
+                    selectedStoryId={selectedStoryId}
+                  />
+                ) : (
+                  <StoryList 
+                    categoryId={activeCategory}
+                    onSelectStory={handleSelectStory}
+                    selectedStoryId={selectedStoryId}
+                  />
+                )}
               </div>
 
               <div style={{ flex: 1, overflow: 'hidden' }}>

@@ -5,6 +5,8 @@ import type { Issue, IssueAction } from '@/data/types';
 import styles from '../app/page.module.css';
 import CorroborationIssueCard from './CorroborationIssueCard';
 import CorroborationSupportCard, { SupportItem } from './CorroborationSupportCard';
+import CorrCategoryView from './CorrCategoryView';
+import { CORR_STORY_TITLE_MAP } from './CorrCategoryStoryList';
 
 const { Text } = Typography;
 
@@ -395,19 +397,81 @@ const IssueList: React.FC<IssueListProps> = ({
       overflow: 'hidden'
     }}>
       <div style={{ flex: 1, overflow: 'auto', paddingRight: '4px' }}>
-        {/* Maturity Progress Section */}
-        <div style={{ 
-          marginBottom: '12px', 
-          padding: '10px',
-          backgroundColor: '#f9f9f9',
-          borderRadius: '6px',
-          border: '1px solid #e9e9e9'
-        }}>
-          {/* Owner Review Header with Story Title */}
+        {/* Maturity Progress Section - hide for CORR category */}
+        {!isCorrCategory && (
           <div style={{ 
+            marginBottom: '12px', 
+            padding: '10px',
+            backgroundColor: '#f9f9f9',
+            borderRadius: '6px',
+            border: '1px solid #e9e9e9'
+          }}>
+            {/* Owner Review Header with Story Title */}
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              marginBottom: '8px'
+            }}>
+              <div style={{ 
+                width: '22px', 
+                height: '22px', 
+                borderRadius: '50%', 
+                backgroundColor: '#000', 
+                color: '#fff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '11px',
+                fontWeight: 'bold',
+                marginRight: '6px'
+              }}>
+                O
+              </div>
+              <Text style={{ fontWeight: 'bold', fontSize: '14px', flex: 1 }}>
+                {storyTitle ? `${storyTitle} - ${ownerName}` : `Owner Review: ${ownerName}`}
+              </Text>
+            </div>
+            
+            {/* Progress bar */}
+            <Progress 
+              percent={maturityProgress} 
+              status={maturityProgress === 100 ? "success" : "active"} 
+              strokeColor={maturityProgress === 100 ? "#52c41a" : "#ff4d4f"} 
+              strokeWidth={8}
+              trailColor="#f0f0f0"
+              showInfo={false}
+            />
+            
+            {/* Progress information */}
+            <div style={{ marginTop: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              {/* Incomplete parts text */}
+              {maturityProgress < 100 && (
+                <div style={{ fontSize: '12px', color: '#ff7a45' }}>
+                  <Text>Incomplete: </Text>
+                  {Array.from(new Set(issues.filter(issue => issue.state === 'open')
+                    .map(issue => issue.category)))
+                    .sort() // Sort categories for consistent display
+                    .map((category, index, arr) => (
+                      <Text key={category}>
+                        {category}{index < arr.length - 1 ? ', ' : ''}
+                      </Text>
+                    ))}
+                </div>
+              )}
+              
+              <Text style={{ color: maturityProgress === 100 ? "#52c41a" : "#ff4d4f", fontWeight: 'bold', fontSize: '14px' }}>
+                {maturityProgress}% Complete
+              </Text>
+            </div>
+          </div>
+        )}
+
+        {/* Show story title for CORR category */}
+        {isCorrCategory && storyId && (
+          <div style={{ 
+            marginBottom: '16px', 
             display: 'flex', 
-            alignItems: 'center', 
-            marginBottom: '8px'
+            alignItems: 'center'
           }}>
             <div style={{ 
               width: '22px', 
@@ -420,71 +484,28 @@ const IssueList: React.FC<IssueListProps> = ({
               justifyContent: 'center',
               fontSize: '11px',
               fontWeight: 'bold',
-              marginRight: '6px'
+              marginRight: '10px'
             }}>
               O
             </div>
-            <Text style={{ fontWeight: 'bold', fontSize: '14px', flex: 1 }}>
-              {storyTitle ? `${storyTitle} - ${ownerName}` : `Owner Review: ${ownerName}`}
+            <Text style={{ fontWeight: 'bold', fontSize: '16px' }}>
+              {storyId && CORR_STORY_TITLE_MAP[storyId] ? CORR_STORY_TITLE_MAP[storyId] : storyTitle}
             </Text>
           </div>
-          
-          {/* Progress bar */}
-          <Progress 
-            percent={maturityProgress} 
-            status={maturityProgress === 100 ? "success" : "active"} 
-            strokeColor={maturityProgress === 100 ? "#52c41a" : "#ff4d4f"} 
-            strokeWidth={8}
-            trailColor="#f0f0f0"
-            showInfo={false}
-          />
-          
-          {/* Progress information */}
-          <div style={{ marginTop: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            {/* Incomplete parts text */}
-            {maturityProgress < 100 && (
-              <div style={{ fontSize: '12px', color: '#ff7a45' }}>
-                <Text>Incomplete: </Text>
-                {Array.from(new Set(issues.filter(issue => issue.state === 'open')
-                  .map(issue => issue.category)))
-                  .sort() // Sort categories for consistent display
-                  .map((category, index, arr) => (
-                    <Text key={category}>
-                      {category}{index < arr.length - 1 ? ', ' : ''}
-                    </Text>
-                  ))}
-              </div>
-            )}
-            
-            <Text style={{ color: maturityProgress === 100 ? "#52c41a" : "#ff4d4f", fontWeight: 'bold', fontSize: '14px' }}>
-              {maturityProgress}% Complete
-            </Text>
-          </div>
-        </div>
-
-        {/* Corroboration Support Cards - only shown for CORR category */}
-        {isCorrCategory && (
-          <>
-            {supportingDocs && supportingDocs.length > 0 && (
-              <CorroborationSupportCard 
-                type="document" 
-                items={supportingDocs} 
-                storyTitle={storyTitle}
-              />
-            )}
-            
-            {mentionedLinks && mentionedLinks.length > 0 && (
-              <CorroborationSupportCard 
-                type="link" 
-                items={mentionedLinks} 
-                storyTitle={storyTitle}
-              />
-            )}
-          </>
         )}
-        
-        {/* Only render regular issues if we have them */}
-        {issues.length > 0 && renderIssues()}
+
+        {/* Use CorrCategoryView for CORR category */}
+        {isCorrCategory ? (
+          <CorrCategoryView
+            supportingDocs={supportingDocs}
+            mentionedLinks={mentionedLinks}
+            storyTitle={storyTitle}
+            storyId={storyId}
+          />
+        ) : (
+          /* Only render regular issues if we have them */
+          issues.length > 0 && renderIssues()
+        )}
       </div>
     </div>
   );
